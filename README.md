@@ -1,33 +1,44 @@
 # YouTube Transcript via GitHub Actions
 
-This repository uses GitHub Actions to fetch a YouTube transcript. No Vercel, web server, or external application layer is required.
+GitHub + YouTube only.
 
 ## Flow
 
-ChatGPT -> GitHub issue request -> GitHub Action -> YouTube -> temporary Actions artifact -> ChatGPT.
+ChatGPT -> GitHub issue request -> GitHub Action -> YouTube -> temporary transcript artifact -> ChatGPT.
 
-The request stores only the 11-character YouTube video ID, not the full YouTube URL.
+Only the 11-character video ID is used in the request. The full YouTube URL is not required.
 
 ## Trigger
 
-Create an issue with this exact title format:
+Create an issue titled:
 
 ```
 [transcript] rSBazrcpC5o
 ```
 
-The workflow validates the ID, runs the extractor chain, then uploads:
+The Action tries:
 
-- `transcript.txt`
-- `transcript.json`
-
-Artifacts are retained for **1 day**.
-
-## Extractor chain
-
-1. youtubei.js
+1. YouTube transcript via youtubei.js
 2. youtube-transcript
-3. direct YouTube watch-page caption track
+3. direct caption track
+4. YouTube.js audio download
+5. yt-dlp audio download + local Whisper transcription
+
+The produced `transcript.txt` and `transcript.json` artifacts are retained for 1 day.
+
+## Videos without captions
+
+GitHub-hosted runners are sometimes challenged by YouTube with "Sign in to confirm you're not a bot" when downloading audio.
+
+For those videos, add a repository Actions secret named:
+
+```
+YOUTUBE_COOKIES_B64
+```
+
+Its value should be a base64-encoded Netscape-format YouTube cookies file. Do not commit cookies to the repository.
+
+The workflow writes the cookie file only for the job, then deletes it.
 
 ## Development
 
@@ -37,7 +48,3 @@ npm test
 npm run typecheck
 VIDEO_ID=rSBazrcpC5o npm run extract
 ```
-
-## Notes
-
-The repository does not contain a database or transcript archive. GitHub itself keeps normal repository, issue, Actions, and artifact metadata according to GitHub's platform behavior.
