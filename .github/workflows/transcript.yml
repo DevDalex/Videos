@@ -8,9 +8,10 @@ jobs:
   extract:
     if: startsWith(github.event.issue.title, '[transcript] ')
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     permissions:
       contents: read
+      issues: write
 
     steps:
       - uses: actions/checkout@v4
@@ -32,8 +33,30 @@ jobs:
 
       - run: npm install
 
-      - name: Extract transcript
+      - name: Try YouTube captions
+        id: captions
+        continue-on-error: true
         run: npm run extract
+
+      - uses: actions/setup-python@v5
+        if: steps.captions.outcome == 'failure'
+        with:
+          python-version: '3.12'
+
+      - name: Install audio fallback
+        if: steps.captions.outcome == 'failure'
+        run: python -m pip install --upgrade yt-dlp faster-whisper
+
+      - name: Download audio
+        if: steps.captions.outcome == 'failure'
+        run: |
+          yt-dlp             --no-playlist             -x             --audio-format mp3             --write-info-json             -o "audio.%(ext)s"             "https://www.youtube.com/watch?v=$VIDEO_ID"
+
+      - name: Transcribe audio with Whisper
+        if: steps.captions.outcome == 'failure'
+        env:
+          WHISPER_MODEL: base
+        run: python scripts/transcribe_audio.py
 
       - name: Upload transcript
         uses: actions/upload-artifact@v4
@@ -44,3 +67,12 @@ jobs:
             transcript.txt
           retention-days: 1
           if-no-files-found: error
+
+      - name: Redact and close request
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" --title "[processed]" --body ""
+          gh issue close "$ISSUE_NUMBER"
