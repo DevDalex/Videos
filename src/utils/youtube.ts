@@ -23,16 +23,14 @@ export function extractVideoId(input: string): string | null {
         const id = parts[1] ?? '';
         return VIDEO_ID.test(id) ? id : null;
       }
+
+      return null;
     }
+
+    return null;
   } catch {
-    // Fall through to the conservative pattern below.
+    return null;
   }
-
-  const match = value.match(
-    /(?:youtu\.be\/|youtube\.com\/(?:shorts|embed|live)\/|[?&]v=)([A-Za-z0-9_-]{11})(?:[^A-Za-z0-9_-]|$)/
-  );
-
-  return match?.[1] ?? null;
 }
 
 export function normalizeLanguage(input: unknown): string | undefined {
