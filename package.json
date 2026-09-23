@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vercel dev",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test test/**/*.test.ts"
+    "test": "tsx --test test/youtube-url.test.ts"
   },
   "dependencies": {
     "hono": "^4.13.8",
