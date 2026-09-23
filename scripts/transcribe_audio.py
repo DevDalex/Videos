@@ -5,13 +5,22 @@ from pathlib import Path
 from faster_whisper import WhisperModel
 
 video_id = os.environ["VIDEO_ID"]
-audio_path = Path("audio.mp3")
+
+candidates = [
+    Path("audio.media"),
+    Path("audio.mp3"),
+    Path("audio.webm"),
+    Path("audio.m4a"),
+    Path("audio.mp4"),
+]
+
+audio_path = next((path for path in candidates if path.exists()), None)
+if audio_path is None:
+    raise SystemExit("No downloaded audio file was found")
+
 info_path = Path("audio.info.json")
-
-if not audio_path.exists():
-    raise SystemExit("audio.mp3 was not created")
-
 title = None
+
 if info_path.exists():
     try:
         title = json.loads(info_path.read_text("utf-8")).get("title")
