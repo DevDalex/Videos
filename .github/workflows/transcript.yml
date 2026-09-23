@@ -53,10 +53,23 @@ jobs:
         if: steps.captions.outcome == 'failure'
         run: python -m pip install --upgrade faster-whisper yt-dlp
 
+      - name: Prepare YouTube cookies
+        if: steps.captions.outcome == 'failure' && steps.youtube_audio.outcome == 'failure'
+        env:
+          YOUTUBE_COOKIES_B64: ${{ secrets.YOUTUBE_COOKIES_B64 }}
+        run: |
+          if [ -n "$YOUTUBE_COOKIES_B64" ]; then
+            printf '%s' "$YOUTUBE_COOKIES_B64" | base64 --decode > youtube-cookies.txt
+            chmod 600 youtube-cookies.txt
+            echo "COOKIE_ARGS=--cookies youtube-cookies.txt" >> "$GITHUB_ENV"
+          else
+            echo "COOKIE_ARGS=" >> "$GITHUB_ENV"
+          fi
+
       - name: Try yt-dlp audio download
         if: steps.captions.outcome == 'failure' && steps.youtube_audio.outcome == 'failure'
         run: |
-          yt-dlp             --no-playlist             -x             --audio-format mp3             --write-info-json             -o "audio.%(ext)s"             "https://www.youtube.com/watch?v=$VIDEO_ID"
+          yt-dlp             --no-playlist             -x             --audio-format mp3             --write-info-json             $COOKIE_ARGS             -o "audio.%(ext)s"             "https://www.youtube.com/watch?v=$VIDEO_ID"
 
       - name: Transcribe audio with Whisper
         if: steps.captions.outcome == 'failure'
@@ -73,6 +86,10 @@ jobs:
             transcript.txt
           retention-days: 1
           if-no-files-found: error
+
+      - name: Remove temporary authentication file
+        if: always()
+        run: rm -f youtube-cookies.txt
 
       - name: Redact and close request
         if: always()
